@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Paramètres visuels pour sumo-gui — Marrakech
+    Centre la vue sur la Médina de Marrakech
+-->
+<viewsettings>
+
+    <!-- Vue initiale : centrée sur Jemaa el-Fna -->
+    <viewport x="0" y="0" zoom="100"/>
+
+    <!-- ── Couleurs du fond ── -->
+    <background backgroundColor="gray10"/>
+
+    <!-- ── Rendu des routes ── -->
+    <edges laneEdgeMode="0"
+           laneShowBorders="1"
+           laneColorMode="0"
+           edgeColorMode="0"
+           showLinkDecals="1"
+           showRails="1"
+           showEdgeName="1"
+           edgeNameSize="50"
+           edgeNameColor="white"
+           showStreetName="1"
+           streetNameSize="40"
+           streetNameColor="lightyellow"
+           drawEdgeColor="1"/>
+
+    <!-- ── Feux de signalisation ── -->
+    <junctions drawShape="1"
+               drawCrossingsAndWalkingareas="1"
+               showLinkDecals="1"/>
+
+    <!-- ── Véhicules ── -->
+    <vehicles vehicleMode="0"
+              vehicleQuality="2"
+              vehicleSize="1.0"
+              showBlinker="1"
+              drawVehicleName="0"
+              vehicleNameSize="50"
+              vehicleNameColor="yellow"
+              showMinGap="0"
+              showBrakeGap="0"
+              colorValue="speed"/>
+
+    <!-- ── Détection de trajet ── -->
+    <persons personMode="0"/>
+    <containers containerMode="0"/>
+
+    <!-- ── Légende couleur vitesse ── -->
+    <!-- vert = rapide, rouge = lent -->
+
+</viewsettings>

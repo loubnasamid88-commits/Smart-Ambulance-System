@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="marrakech.net.xml"/>
+        <route-files value="marrakech_rebuilt.rou.xml"/>
+    </input>
+
+    <time>
+        <begin value="0"/>
+        <end value="7200"/>
+        <step-length value="0.5"/>
+    </time>
+
+    <processing>
+        <collision.action value="teleport"/>
+        <time-to-teleport value="180"/>
+        <lanechange.duration value="2"/>
+        <tls.all-off value="false"/>
+        <ignore-route-errors value="true"/>
+    </processing>
+
+    <output>
+        <summary-output value="output/marrakech_summary.xml"/>
+        <fcd-output value="output/marrakech_fcd.xml"/>
+        <edgedata-output value="output/marrakech_edgedata.xml"/>
+    </output>
+
+    <gui_only>
+        <gui-settings-file value="marrakech.view.xml"/>
+        <start value="true"/>
+        <delay value="120"/>
+    </gui_only>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+        <log value="output/marrakech_simulation.log"/>
+    </report>
+
+</configuration>

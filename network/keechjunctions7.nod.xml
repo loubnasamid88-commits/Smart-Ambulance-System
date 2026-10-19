@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-02-26T16:24:38.500911+01:00 by Eclipse SUMO netedit 1.26.0
+<neteditConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/neteditConfiguration.xsd">
+
+    <input>
+        <sumocfg-file value="C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.sumocfg"/>
+        <additional-files value="C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.poly.xml.gz,C:\Users\hp\Sumo\2026-02-26-08-39-58\output.add.xml"/>
+        <route-files value="C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.bicycle.trips.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.bus.trips.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.motorcycle.trips.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.passenger.trips.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.pedestrian.rou.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.rail_urban.trips.xml,C:\Users\hp\Sumo\2026-02-26-08-39-58\osm.truck.trips.xml"/>
+        <sumo-net-file value="C:\Users\hp\Sumo\2026-02-26-08-39-58\keech7.net.xml"/>
+    </input>
+
+    <output>
+        <output.street-names value="true"/>
+    </output>
+
+    <processing>
+        <geometry.min-radius.fix.railways value="false"/>
+        <geometry.avoid-overlap value="false"/>
+        <geometry.max-grade.fix value="false"/>
+        <offset.disable-normalization value="true"/>
+        <lefthand value="0"/>
+    </processing>
+
+    <junctions>
+        <no-internal-links value="false"/>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <junctions.limit-turn-speed value="5.50"/>
+        <rectangular-lane-cut value="0"/>
+    </junctions>
+
+    <pedestrian>
+        <walkingareas value="1"/>
+    </pedestrian>
+
+</neteditConfiguration>
+-->
+
+<nodes version="1.20" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+</nodes>

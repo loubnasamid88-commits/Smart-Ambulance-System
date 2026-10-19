@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['Car Flip', 'car Accident', 'car Accident hiting a tree']
+
+roboflow:
+  workspace: latifa-fuirj
+  project: car-accident-jp29y
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/latifa-fuirj/car-accident-jp29y/dataset/1

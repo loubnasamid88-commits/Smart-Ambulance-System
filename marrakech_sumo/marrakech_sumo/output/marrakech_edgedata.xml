@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-10-18T23:22:37.147764+00:00 by Eclipse SUMO GUI 1.26.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\marrakech.net.xml"/>
+        <route-files value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\marrakech_rebuilt.rou.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\output/marrakech_fcd.xml"/>
+        <summary-output value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\output/marrakech_summary.xml"/>
+        <edgedata-output value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\output/marrakech_edgedata.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="7200"/>
+        <step-length value="0.5"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <collision.action value="teleport"/>
+        <time-to-teleport value="180"/>
+        <lanechange.duration value="2"/>
+        <tls.all-off value="false"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <no-warnings value="true"/>
+        <log value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\output/marrakech_simulation.log"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <traci_server>
+        <remote-port value="62939"/>
+    </traci_server>
+
+    <gui_only>
+        <gui-settings-file value="C:\Users\hp\Downloads\ppfe_f (5)\ppfe_f\ppfe_f\ppfe\ppfe\sumo\marrakech_sumo\marrakech_sumo\marrakech.view.xml"/>
+        <quit-on-end value="false"/>
+        <start value="true"/>
+        <delay value="120"/>
+    </gui_only>
+
+</sumoConfiguration>

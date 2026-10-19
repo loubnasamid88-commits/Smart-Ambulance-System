@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>🚑 SAMU Command Center — Marrakech</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg-void: #020408;
+  --bg-deep: #050c14;
+  --bg-panel: #071220;
+  --bg-card: #0a1a2e;
+  --bg-hover: #0d2040;
+  --border: rgba(0,200,255,0.12);
+  --border-bright: rgba(0,200,255,0.35);
+  --accent-cyan: #00c8ff;
+  --accent-blue: #0066ff;
+  --accent-red: #ff2244;
+  --accent-green: #00ff88;
+  --accent-orange: #ff8800;
+  --accent-yellow: #ffd700;
+  --text-bright: #e8f4ff;
+  --text-mid: #7ab0cc;
+  --text-dim: #3a5a70;
+  --glow-cyan: 0 0 20px rgba(0,200,255,0.4);
+  --glow-red: 0 0 20px rgba(255,34,68,0.5);
+  --glow-green: 0 0 20px rgba(0,255,136,0.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Exo 2', sans-serif;
+  background: var(--bg-void);
+  color: var(--text-bright);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  top:0;left:0;right:0;bottom:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.01) 2px,rgba(0,200,255,0.01) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+.grid-bg {
+  position: fixed; inset: 0;
+  background-image: linear-gradient(rgba(0,200,255,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(0,200,255,0.04) 1px,transparent 1px);
+  background-size: 60px 60px;
+  animation: gridPulse 8s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+@keyframes gridPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+.app { position:relative; z-index:1; min-height:100vh; }
+
+/* ===== HEADER ===== */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; height:64px;
+  background: linear-gradient(180deg,rgba(0,100,200,0.08) 0%,transparent 100%);
+  border-bottom: 1px solid var(--border-bright);
+  position:relative; overflow:hidden;
+}
+.header::before {
+  content:''; position:absolute; bottom:0;left:0;right:0; height:2px;
+  background: linear-gradient(90deg,transparent,var(--accent-cyan),var(--accent-blue),var(--accent-cyan),transparent);
+  animation: scanLine 3s linear infinite;
+}
+@keyframes scanLine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+.header-left { display:flex; align-items:center; gap:14px; }
+.header-logo {
+  font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+  letter-spacing:3px;
+  background: linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  text-transform:uppercase;
+}
+.header-sub {
+  font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim);
+  letter-spacing:2px; text-transform:uppercase;
+  border-left:1px solid var(--border-bright); padding-left:14px;
+}
+.header-status { display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-green); letter-spacing:1px; }
+.pulse-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--accent-green); box-shadow:var(--glow-green);
+  animation:dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
+.header-time { font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--text-mid); letter-spacing:2px; }
+
+/* ===== CONTROLS BAR ===== */
+.controls-bar {
+  display:flex; align-items:center; gap:10px; padding:12px 28px;
+  background:rgba(5,12,20,.8); border-bottom:1px solid var(--border); flex-wrap:wrap;
+}
+.controls-label { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-right:4px; }
+.btn {
+  position:relative; padding:8px 20px; border:none; cursor:pointer;
+  font-family:'Rajdhani',sans-serif; font-weight:600; font-size:13px;
+  letter-spacing:2px; text-transform:uppercase; border-radius:3px; overflow:hidden;
+  transition:all .2s ease;
+  clip-path: polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+.btn::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity .2s; background:rgba(255,255,255,.1); }
+.btn:hover::before { opacity:1; }
+.btn:active { transform:scale(.97); }
+.btn:hover { transform:translateY(-1px); filter:brightness(1.2); }
+.btn-start   { background:linear-gradient(135deg,#004d00,#00aa44); color:#00ff88; box-shadow:0 0 15px rgba(0,170,68,.3); }
+.btn-accident{ background:linear-gradient(135deg,#4d0010,#cc1133); color:#ff6680; box-shadow:0 0 15px rgba(204,17,51,.3); }
+.btn-dispatch{ background:linear-gradient(135deg,#003399,#0055ff); color:#66aaff; box-shadow:0 0 15px rgba(0,85,255,.3); }
+.btn-stop    { background:linear-gradient(135deg,#2a2a2a,#555); color:#aaa; }
+.btn-reset   { background:linear-gradient(135deg,#4d3800,#cc8800); color:#ffd700; box-shadow:0 0 15px rgba(204,136,0,.3); }
+/* Bouton SUMO status inline */
+.sumo-badge {
+  display:flex; align-items:center; gap:6px; padding:6px 14px;
+  background:rgba(0,200,255,0.06); border:1px solid var(--border);
+  border-radius:3px; font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:var(--text-dim); letter-spacing:1px; margin-left:8px;
+  transition: all .3s;
+}
+.sumo-badge.online { border-color:var(--accent-green); color:var(--accent-green); background:rgba(0,255,136,.06); }
+
+.alert-badge {
+  display:none; align-items:center; gap:8px; margin-left:auto; padding:6px 16px;
+  background:rgba(255,34,68,.15); border:1px solid var(--accent-red); border-radius:3px;
+  animation:alertBlink 1s ease-in-out infinite;
+}
+.alert-badge.show { display:flex; }
+@keyframes alertBlink { 0%,100%{opacity:1} 50%{opacity:.5} }
+.alert-text { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-red); letter-spacing:1px; }
+
+/* ===== LAYOUT ===== */
+.main {
+  display:grid;
+  grid-template-columns: 340px 1fr 340px;
+  grid-template-rows: auto 1fr;
+  gap:0;
+  height:calc(100vh - 128px);
+}
+.panel {
+  background:var(--bg-panel); border-right:1px solid var(--border);
+  overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border-bright) transparent;
+}
+.panel:last-child { border-right:none; border-left:1px solid var(--border); }
+.panel-center { border-right:1px solid var(--border); display:flex; flex-direction:column; gap:0; }
+.section-header {
+  display:flex; align-items:center; gap:8px; padding:12px 16px 10px;
+  border-bottom:1px solid var(--border); background:rgba(0,200,255,.03);
+}
+.section-title { font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--accent-cyan); }
+.section-count { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); background:rgba(0,200,255,.08); padding:2px 8px; border-radius:2px; border:1px solid var(--border); }
+
+/* ===== KPI CARDS ===== */
+.kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); }
+.kpi-card { background:var(--bg-panel); padding:16px; position:relative; overflow:hidden; transition:background .2s; }
+.kpi-card::before { content:''; position:absolute; top:0;left:0; width:3px; height:100%; }
+.kpi-card.cyan::before  { background:var(--accent-cyan);   box-shadow:var(--glow-cyan); }
+.kpi-card.green::before { background:var(--accent-green);  box-shadow:var(--glow-green); }
+.kpi-card.orange::before{ background:var(--accent-orange); }
+.kpi-card.red::before   { background:var(--accent-red);    box-shadow:var(--glow-red); }
+.kpi-card:hover { background:var(--bg-hover); }
+.kpi-label { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; }
+.kpi-value { font-family:'Rajdhani',sans-serif; font-size:28px; font-weight:700; line-height:1; }
+.kpi-card.cyan   .kpi-value { color:var(--accent-cyan); }
+.kpi-card.green  .kpi-value { color:var(--accent-green); }
+.kpi-card.orange .kpi-value { color:var(--accent-orange); }
+.kpi-card.red    .kpi-value { color:var(--accent-red); }
+.kpi-unit { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); margin-left:4px; }
+
+/* ===== MAP ===== */
+#map { flex:1; min-height:300px; position:relative; }
+.leaflet-container { background:#e8e8e8 !important; }
+.map-corner { position:absolute; width:20px; height:20px; border-color:var(--accent-cyan); border-style:solid; z-index:1000; pointer-events:none; opacity:.7; }
+.map-corner.tl { top:10px;left:10px;   border-width:2px 0 0 2px; }
+.map-corner.tr { top:10px;right:10px;  border-width:2px 2px 0 0; }
+.map-corner.bl { bottom:10px;left:10px;  border-width:0 0 2px 2px; }
+.map-corner.br { bottom:10px;right:10px; border-width:0 2px 2px 0; }
+
+/* ===== SUMO STATS MINI BAR sur la carte ===== */
+.map-sumo-overlay {
+  position:absolute; bottom:60px; left:50%; transform:translateX(-50%);
+  z-index:1000; display:flex; gap:12px; align-items:center;
+  background:rgba(2,4,8,.85); border:1px solid var(--border-bright);
+  padding:5px 16px; border-radius:3px;
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:var(--text-dim); letter-spacing:1px; pointer-events:none;
+}
+.map-sumo-overlay .val { color:var(--accent-cyan); font-weight:700; }
+.map-sumo-overlay.active { border-color:var(--accent-green); }
+.map-sumo-overlay.active .val { color:var(--accent-green); }
+
+/* ===== TABLE ===== */
+.amb-table-wrap { padding:0; overflow-x:auto; }
+.amb-table { width:100%; border-collapse:collapse; }
+.amb-table th {
+  background:rgba(0,200,255,.06); padding:8px 10px; text-align:left;
+  font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px;
+  color:var(--text-dim); text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.amb-table td {
+  padding:9px 10px; border-bottom:1px solid rgba(0,200,255,.05);
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-mid); white-space:nowrap;
+}
+.amb-table tr:hover td { background:rgba(0,200,255,.04); }
+.status-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:2px; font-size:9px; letter-spacing:1px; font-weight:700; text-transform:uppercase; }
+.status-available  { background:rgba(0,255,136,.1);   color:var(--accent-green);  border:1px solid rgba(0,255,136,.25); }
+.status-moving,
+.status-dispatched { background:rgba(255,136,0,.1);   color:var(--accent-orange); border:1px solid rgba(255,136,0,.25); animation:statusBlink 1.5s ease-in-out infinite; }
+@keyframes statusBlink { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+/* ===== CHART ===== */
+.chart-section { padding:16px; background:var(--bg-panel); border-top:1px solid var(--border); height:200px; }
+canvas { background:transparent !important; }
+
+/* ===== ACCIDENTS LIST ===== */
+.accident-item { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid rgba(0,200,255,.05); transition:background .15s; cursor:default; }
+.accident-item:hover { background:rgba(0,200,255,.04); }
+.acc-severity { width:6px; height:32px; border-radius:3px; flex-shrink:0; }
+.sev-low    { background:var(--accent-green);  box-shadow:var(--glow-green); }
+.sev-medium { background:var(--accent-orange); }
+.sev-high   { background:var(--accent-red);    box-shadow:var(--glow-red); }
+.acc-info { flex:1; }
+.acc-id { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:14px; color:var(--text-bright); letter-spacing:1px; }
+.acc-details { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:1px; margin-top:2px; }
+.acc-status-badge { font-family:'JetBrains Mono',monospace; font-size:8px; padding:2px 7px; border-radius:2px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
+.acc-waiting   { background:rgba(255,34,68,.15);   color:var(--accent-red);    border:1px solid rgba(255,34,68,.3); }
+.acc-completed { background:rgba(0,255,136,.1);    color:var(--accent-green);  border:1px solid rgba(0,255,136,.25); }
+.acc-arrived   { background:rgba(0,200,255,.1);    color:var(--accent-cyan);   border:1px solid rgba(0,200,255,.25); }
+.acc-dispatched{ background:rgba(255,136,0,.1);    color:var(--accent-orange); border:1px solid rgba(255,136,0,.25); animation:statusBlink 1.5s infinite; }
+
+/* ===== HOSPITALS ===== */
+.hospital-item { padding:12px 16px; border-bottom:1px solid rgba(0,200,255,.05); transition:background .15s; }
+.hospital-item:hover { background:rgba(0,200,255,.04); }
+.hosp-name { font-family:'Exo 2',sans-serif; font-weight:600; font-size:13px; color:var(--text-bright); margin-bottom:6px; }
+.hosp-bar-wrap { display:flex; align-items:center; gap:10px; }
+.hosp-bar-bg { flex:1; height:6px; background:rgba(255,255,255,.06); border-radius:3px; overflow:hidden; }
+.hosp-bar { height:100%; border-radius:3px; transition:width .5s ease; }
+.hosp-bar.low  { background:linear-gradient(90deg,var(--accent-green),#00ff88cc); }
+.hosp-bar.mid  { background:linear-gradient(90deg,var(--accent-orange),#ff8800cc); }
+.hosp-bar.high { background:linear-gradient(90deg,var(--accent-red),#ff2244cc); }
+.hosp-pct { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); width:36px; text-align:right; }
+
+/* ===== SUGGESTIONS ===== */
+.suggestion-item { display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid rgba(0,200,255,.05); }
+.sug-icon { color:var(--accent-cyan); font-size:14px; }
+.sug-text { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-mid); letter-spacing:.5px; }
+.no-data { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); padding:12px 16px; letter-spacing:1px; }
+
+/* ===== EVALUATION ===== */
+.compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); }
+.compare-card { background:var(--bg-panel); padding:14px 16px; }
+.compare-head { font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+.compare-head.without { color:var(--accent-orange); }
+.compare-head.with { color:var(--accent-green); }
+.compare-line { display:flex; justify-content:space-between; gap:10px; padding:4px 0; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-mid); }
+.compare-line strong { color:var(--text-bright); font-weight:700; }
+.eval-summary { padding:12px 16px; border-top:1px solid rgba(0,200,255,.08); }
+.eval-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid rgba(0,255,136,.25); color:var(--accent-green); background:rgba(0,255,136,.08); border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+.eval-latest { margin-top:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); line-height:1.7; }
+
+/* ===== PERFORMANCE ===== */
+.perf-item { padding:10px 16px; border-bottom:1px solid rgba(0,200,255,.05); }
+.perf-header { display:flex; justify-content:space-between; margin-bottom:5px; }
+.perf-name { font-family:'Rajdhani',sans-serif; font-weight:600; font-size:12px; color:var(--text-mid); letter-spacing:1px; }
+.perf-pct  { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--accent-cyan); }
+.perf-bar-bg { height:4px; background:rgba(255,255,255,.05); border-radius:2px; overflow:hidden; }
+.perf-bar { height:100%; background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan)); border-radius:2px; transition:width .6s ease; box-shadow:0 0 8px rgba(0,200,255,.5); }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:2px; }
+
+/* ===== TOAST ===== */
+.toast-container { position:fixed; top:80px; right:20px; z-index:10000; display:flex; flex-direction:column; gap:8px; }
+.toast { padding:10px 16px; background:var(--bg-card); border:1px solid var(--border-bright); border-radius:3px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-bright); animation:toastIn .3s ease, toastOut .3s ease 2.7s forwards; max-width:300px; letter-spacing:.5px; box-shadow:0 4px 20px rgba(0,0,0,.5); }
+.toast.success { border-color:var(--accent-green); color:var(--accent-green); }
+.toast.error   { border-color:var(--accent-red);   color:var(--accent-red); }
+.toast.info    { border-color:var(--accent-cyan);  color:var(--accent-cyan); }
+@keyframes toastIn  { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes toastOut { to{opacity:0;transform:translateX(20px)} }
+
+/* ===== SUMO LOG PANEL ===== */
+.sumo-log {
+  background:rgba(0,0,0,.4); border:1px solid var(--border); border-radius:3px;
+  margin:8px 16px; padding:8px; max-height:80px; overflow-y:auto;
+  font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:.5px;
+}
+.sumo-log .log-line { padding:1px 0; border-bottom:1px solid rgba(0,200,255,.05); }
+.sumo-log .log-line.ok   { color:var(--accent-green); }
+.sumo-log .log-line.err  { color:var(--accent-red); }
+.sumo-log .log-line.info { color:var(--accent-cyan); }
+
+.table-section { grid-column:1/-1; background:var(--bg-panel); border-top:1px solid var(--border); max-height:260px; overflow-y:auto; }
+
+/* CRASH ANIMATIONS */
+@keyframes cRing  { 0%{transform:scale(.3);opacity:.8} 100%{transform:scale(2.4);opacity:0} }
+@keyframes cShake { 0%{transform:rotate(-1.5deg) scale(1)} 100%{transform:rotate(1.5deg) scale(1.05)} }
+@keyframes cBoom  { 0%{transform:translateX(-50%) scale(.85) rotate(-8deg);opacity:.7} 100%{transform:translateX(-50%) scale(1.15) rotate(8deg);opacity:1} }
+</style>
+</head>
+
+<body>
+<div class="grid-bg"></div>
+<div class="app">
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">🚑 SAMU</div>
+      <div class="header-sub">Command &amp; Control Center — Marrakech Region</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+      <div class="header-status">
+        <div class="pulse-dot"></div>
+        <span>SYSTÈME ACTIF</span>
+      </div>
+      <!-- SUMO STATUS dans le header -->
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;border-left:1px solid var(--border);padding-left:14px;">
+        <div id="sumoStatusDot" style="width:7px;height:7px;border-radius:50%;background:var(--text-dim);transition:all .3s;"></div>
+        <span id="sumoStatusText">SUMO OFFLINE</span>
+        <span id="sumoSimTime" style="color:var(--text-dim)"></span>
+      </div>
+      <div class="header-time" id="clockDisplay">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- CONTROLS BAR -->
+  <div class="controls-bar">
+    <span class="controls-label">▸ OPÉRATIONS</span>
+    <button class="btn btn-start"    onclick="startSUMO()">▶ START SUMO</button>
+    <button class="btn btn-accident" onclick="generateAccident()">🚨 GÉN. ACCIDENT</button>
+    <button class="btn btn-dispatch" onclick="dispatchAmbulances()">📤 DISPATCH</button>
+    <button class="btn btn-stop"     onclick="stopSUMO()">⛔ STOP SUMO</button>
+    <button class="btn btn-reset"    onclick="resetSystem()">♻ RESET</button>
+    <!-- Badge alerte accident en attente -->
+    <div class="alert-badge" id="alertBadge">
+      <span class="pulse-dot" style="background:var(--accent-red);box-shadow:var(--glow-red)"></span>
+      <span class="alert-text" id="alertText">ACCIDENTS EN ATTENTE</span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="panel" id="leftPanel">
+      <div class="section-header">
+        <span class="section-title">Statistiques Clés</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Distance Moy.</div>
+          <div class="kpi-value"><span id="avgDistance">0</span><span class="kpi-unit">km</span></div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Temps Moyen</div>
+          <div class="kpi-value"><span id="avgTime">0</span><span class="kpi-unit">min</span></div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Interventions</div>
+          <div class="kpi-value"><span id="totalInterv">0</span></div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Ambulance Active</div>
+          <div class="kpi-value" style="font-size:20px"><span id="mostActive">-</span></div>
+        </div>
+      </div>
+
+      <!-- SUMO KPIs temps réel -->
+      <div class="section-header" style="margin-top:1px">
+        <span class="section-title">⚡ SUMO Live</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card cyan" style="padding:12px 16px;">
+          <div class="kpi-label">Véhicules SUMO</div>
+          <div class="kpi-value" style="font-size:22px"><span id="sumoVehicles">0</span></div>
+        </div>
+        <div class="kpi-card green" style="padding:12px 16px;">
+          <div class="kpi-label">Temps Sim.</div>
+          <div class="kpi-value" style="font-size:22px"><span id="sumoTime">0</span><span class="kpi-unit">s</span></div>
+        </div>
+      </div>
+
+      <!-- HOSPITALS -->
+      <div class="section-header" style="margin-top:1px">
+        <span class="section-title">Hôpitaux</span>
+      </div>
+      <div id="hospitalsList"></div>
+
+      <!-- SUGGESTIONS IA -->
+      <div class="section-header">
+        <span class="section-title">💡 Suggestions IA</span>
+      </div>
+      <div id="suggestionsDiv"><div class="no-data">— AUCUNE SUGGESTION ACTIVE —</div></div>
+
+      <!-- EVALUATION -->
+      <div class="section-header">
+        <span class="section-title">Évaluation IA</span>
+      </div>
+      <div id="evaluationPanel">
+        <div class="no-data">— AUCUNE COMPARAISON DISPONIBLE —</div>
+      </div>
+    </div>
+
+    <!-- CENTER PANEL -->
+    <div class="panel-center" style="position:relative;">
+      <div style="position:relative;flex:1;min-height:0;">
+        <div id="map"></div>
+        <div class="map-corner tl"></div>
+        <div class="map-corner tr"></div>
+        <div class="map-corner bl"></div>
+        <div class="map-corner br"></div>
+        <!-- Overlay info carte -->
+        <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(2,4,8,.8);border:1px solid var(--border-bright);padding:4px 16px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;pointer-events:none;">
+          MARRAKECH · 31.6285°N 7.9811°W · OSM NETWORK
+        </div>
+        <!-- SUMO mini stats sur la carte -->
+        <div class="map-sumo-overlay" id="mapSumoOverlay">
+          <span>SUMO</span>
+          <span id="mapSumoStatus" style="color:var(--accent-red);font-weight:700;">OFFLINE</span>
+          <span>|</span>
+          <span>VEH: <span class="val" id="mapSumoVeh">0</span></span>
+          <span>|</span>
+          <span>T: <span class="val" id="mapSumoTime">0</span>s</span>
+        </div>
+      </div>
+      <!-- CHART -->
+      <div class="chart-section">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span class="section-title" style="font-size:11px;">Tableau de Bord Opérationnel</span>
+        </div>
+        <div style="height:140px;">
+          <canvas id="statsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+      <!-- ACCIDENTS -->
+      <div class="section-header">
+        <span class="section-title">Accidents</span>
+        <span class="section-count" id="accCount">0</span>
+      </div>
+      <div id="accidentsList"><div class="no-data">— AUCUN ACCIDENT SIGNALÉ —</div></div>
+
+      <!-- PERFORMANCE -->
+      <div class="section-header" style="margin-top:1px">
+        <span class="section-title">Performance Ambulances</span>
+      </div>
+      <div id="performanceList"></div>
+
+      <!-- LOG SUMO -->
+      <div class="section-header" style="margin-top:1px">
+        <span class="section-title">📋 Journal SUMO</span>
+      </div>
+      <div class="sumo-log" id="sumoLog">
+        <div class="log-line">— En attente de connexion SUMO —</div>
+      </div>
+    </div>
+
+    <!-- TABLE FULL WIDTH -->
+    <div class="table-section">
+      <div class="section-header" style="position:sticky;top:0;z-index:10;">
+        <span class="section-title">Flotte d'Ambulances</span>
+        <span class="section-count" id="ambCount">6</span>
+      </div>
+      <div class="amb-table-wrap">
+        <table class="amb-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Statut</th><th>ETA</th>
+              <th>Missions</th><th>Distance</th><th>Tps Moy.</th><th>Efficacité</th>
+            </tr>
+          </thead>
+          <tbody id="ambulanceBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== HORLOGE =====
+function updateClock(){
+  document.getElementById('clockDisplay').textContent =
+    new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== TOAST =====
+function showToast(msg, type='info'){
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+// ===== SUMO LOG =====
+function addLog(msg, type='info'){
+  const log = document.getElementById('sumoLog');
+  const d = document.createElement('div');
+  d.className = `log-line ${type}`;
+  const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent = `[${time}] ${msg}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  // Garder max 50 lignes
+  while(log.children.length > 50) log.removeChild(log.firstChild);
+}
+
+// ===== MAP INIT =====
+const map = L.map('map',{zoomControl:false}).setView([31.6285,-7.9811],14);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'©OpenStreetMap contributors', maxZoom:19
+}).addTo(map);
+
+// ===== ICONS =====
+function makeIcon(emoji, size=30){
+  return L.divIcon({
+    html:`<div style="font-size:${size}px;line-height:1;filter:drop-shadow(0 0 6px rgba(0,200,255,0.6))">${emoji}</div>`,
+    iconSize:[size,size], iconAnchor:[size/2,size/2], className:''
+  });
+}
+
+function makeCrashIcon(severity='medium'){
+  const palettes = {
+    low:    {car:'#f0c030',car2:'#e08020',glow:'255,200,0'},
+    medium: {car:'#ff8800',car2:'#cc3344',glow:'255,120,0'},
+    high:   {car:'#ff2244',car2:'#cc0022',glow:'255,30,60'}
+  };
+  const p = palettes[severity]||palettes.medium;
+  const html = `
+  <div style="position:relative;width:80px;height:62px;">
+    <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgb(${p.glow});opacity:0;animation:cRing 1.8s ease-out infinite;pointer-events:none;"></div>
+    <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgb(${p.glow});opacity:0;animation:cRing 1.8s ease-out .9s infinite;pointer-events:none;"></div>
+    <svg width="80" height="62" viewBox="0 0 80 62" xmlns="http://www.w3.org/2000/svg"
+      style="filter:drop-shadow(0 0 10px rgba(${p.glow},0.8));animation:cShake .35s ease-in-out infinite alternate;position:relative;z-index:2;">
+      <g transform="rotate(-16,20,36)">
+        <rect x="2" y="26" width="34" height="15" rx="4" fill="${p.car}"/>
+        <rect x="7" y="16" width="20" height="12" rx="3" fill="${p.car}" opacity=".8"/>
+        <rect x="9" y="17" width="7" height="9" rx="1.5" fill="rgba(180,240,255,.55)"/>
+        <rect x="18" y="17" width="6" height="9" rx="1.5" fill="rgba(180,240,255,.55)"/>
+        <circle cx="9" cy="42" r="5" fill="#111" stroke="${p.car}" stroke-width="2"/>
+        <circle cx="28" cy="42" r="5" fill="#111" stroke="${p.car}" stroke-width="2"/>
+        <rect x="34" y="28" width="5" height="4" rx="1" fill="#ffe88a"/>
+        <rect x="2" y="28" width="4" height="4" rx="1" fill="#ff4444" opacity=".8"/>
+      </g>
+      <g transform="rotate(16,60,36)">
+        <rect x="44" y="26" width="34" height="15" rx="4" fill="${p.car2}"/>
+        <rect x="53" y="16" width="20" height="12" rx="3" fill="${p.car2}" opacity=".8"/>
+        <rect x="55" y="17" width="7" height="9" rx="1.5" fill="rgba(180,240,255,.55)"/>
+        <rect x="64" y="17" width="6" height="9" rx="1.5" fill="rgba(180,240,255,.55)"/>
+        <circle cx="52" cy="42" r="5" fill="#111" stroke="${p.car2}" stroke-width="2"/>
+        <circle cx="71" cy="42" r="5" fill="#111" stroke="${p.car2}" stroke-width="2"/>
+        <rect x="41" y="28" width="5" height="4" rx="1" fill="#ffe88a"/>
+        <rect x="74" y="28" width="4" height="4" rx="1" fill="#ff4444" opacity=".8"/>
+      </g>
+      <line x1="38" y1="30" x2="30" y2="18" stroke="#ffcc00" stroke-width="2" opacity=".9"/>
+      <line x1="40" y1="28" x2="40" y2="12" stroke="#ff8800" stroke-width="2" opacity="1"/>
+      <line x1="42" y1="30" x2="50" y2="18" stroke="#ff4400" stroke-width="2" opacity=".9"/>
+      <circle cx="40" cy="28" r="3" fill="#ffdd00" opacity=".95"/>
+      <circle cx="40" cy="14" r="1.5" fill="#ffff88" opacity=".9"/>
+    </svg>
+    <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);font-size:18px;z-index:3;animation:cBoom .6s ease-in-out infinite alternate;line-height:1;">💥</div>
+  </div>`;
+  return L.divIcon({html, iconSize:[80,62], iconAnchor:[40,31], className:''});
+}
+
+const icons = {
+  ambulance: makeIcon('🚑',26),
+  hospital:  makeIcon('🏥',28),
+};
+
+let ambulanceMarkers={}, hospitalMarkers={}, accidentMarkers={}, polylines=[];
+
+// ===== CHART =====
+const statsChart = new Chart(document.getElementById('statsChart'), {
+  type:'bar',
+  data:{
+    labels:['Complétées','Accidents Actifs','Charge Max Hôp.'],
+    datasets:[{
+      label:'',
+      data:[0,0,0],
+      backgroundColor:['rgba(0,255,136,.7)','rgba(255,136,0,.7)','rgba(255,34,68,.7)'],
+      borderColor:['#00ff88','#ff8800','#ff2244'],
+      borderWidth:1, borderRadius:2,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'rgba(0,200,255,.06)'},ticks:{color:'#3a5a70',font:{family:'JetBrains Mono',size:9}}},
+      y:{grid:{color:'rgba(0,200,255,.06)'},ticks:{color:'#3a5a70',font:{family:'JetBrains Mono',size:9}}}
+    }
+  }
+});
+
+// ===== UTILS =====
+function clearPolylines(){ polylines.forEach(l=>map.removeLayer(l)); polylines=[]; }
+function createOrUpdateMarker(col,id,lat,lng,icon,popup){
+  if(col[id]){ col[id].setLatLng([lat,lng]); col[id].setPopupContent(popup); }
+  else { col[id]=L.marker([lat,lng],{icon}).addTo(map).bindPopup(popup,{className:'custom-popup'}); }
+}
+
+// ===== LOAD DATA =====
+function loadData(data){
+  clearPolylines();
+
+  // KPIs principaux
+  document.getElementById('avgDistance').textContent  = data.analysis.average_distance;
+  document.getElementById('avgTime').textContent      = data.analysis.average_time;
+  document.getElementById('totalInterv').textContent  = data.statistics.total_interventions||0;
+  document.getElementById('mostActive').textContent   = 'AMB #'+data.analysis.most_active;
+
+  // Badge alerte
+  const waiting = data.accidents.filter(a=>a.status==='waiting').length;
+  const badge = document.getElementById('alertBadge');
+  if(waiting>0){ badge.classList.add('show'); document.getElementById('alertText').textContent=`${waiting} ACCIDENT(S) EN ATTENTE`; }
+  else badge.classList.remove('show');
+
+  // Chart
+  statsChart.data.datasets[0].data=[
+    data.statistics.completed,
+    data.accidents.filter(a=>a.status!=='completed').length,
+    Math.max(...data.hospitals.map(h=>h.current_load))
+  ];
+  statsChart.update('none');
+
+  // Hôpitaux
+  let hospHTML='';
+  data.hospitals.forEach(h=>{
+    const pct=Math.round((h.current_load/h.capacity)*100);
+    const cls=pct<50?'low':pct<80?'mid':'high';
+    createOrUpdateMarker(hospitalMarkers,h.id,h.lat,h.lng,icons.hospital,
+      `<b>${h.name}</b><br>Capacité: ${h.current_load}/${h.capacity}`);
+    hospHTML+=`<div class="hospital-item">
+      <div class="hosp-name">${h.name}</div>
+      <div class="hosp-bar-wrap">
+        <div class="hosp-bar-bg"><div class="hosp-bar ${cls}" style="width:${pct}%"></div></div>
+        <div class="hosp-pct">${pct}%</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('hospitalsList').innerHTML=hospHTML;
+
+  // Accidents
+  document.getElementById('accCount').textContent=data.accidents.length;
+  let accHTML='';
+  if(data.accidents.length===0){
+    accHTML='<div class="no-data">— AUCUN ACCIDENT SIGNALÉ —</div>';
+  } else {
+    [...data.accidents].reverse().slice(0,8).forEach(a=>{
+      const sevCls=a.severity==='high'?'sev-high':a.severity==='medium'?'sev-medium':'sev-low';
+      const stCls=a.status==='waiting'?'acc-waiting':a.status==='completed'?'acc-completed':a.status==='dispatched'?'acc-dispatched':'acc-arrived';
+      // Marqueur sur carte (sauf si completed)
+      if(a.status!=='completed'){
+        createOrUpdateMarker(accidentMarkers,a.id,a.lat,a.lng,makeCrashIcon(a.severity),
+          `<b>💥 Accident #${a.id}</b><br>Gravité: <b>${a.severity.toUpperCase()}</b><br>Statut: ${a.status}`);
+      }
+      accHTML+=`<div class="accident-item">
+        <div class="acc-severity ${sevCls}"></div>
+        <div class="acc-info">
+          <div class="acc-id" style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;display:inline-block;animation:cBoom .6s ease-in-out infinite alternate;">💥</span>
+            ACCIDENT #${a.id}
+          </div>
+          <div class="acc-details">${a.severity.toUpperCase()} · ${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}</div>
+        </div>
+        <span class="acc-status-badge ${stCls}">${a.status}</span>
+      </div>`;
+    });
+  }
+  document.getElementById('accidentsList').innerHTML=accHTML;
+
+  // Ambulances + table
+  document.getElementById('ambCount').textContent=data.ambulances.length;
+  const tbody=document.getElementById('ambulanceBody');
+  tbody.innerHTML='';
+  data.ambulances.forEach(a=>{
+    createOrUpdateMarker(ambulanceMarkers,a.id,a.lat,a.lng,icons.ambulance,
+      `🚑 <b>Ambulance ${a.id}</b><br>Statut: ${a.status.replaceAll('_',' ')}<br>ETA: ${a.eta||'-'} min`);
+    if(a.history&&a.history.length>1){
+      let lineGlow=L.polyline(a.history.map(p=>[p.lat,p.lng]),{color:'#00c8ff',weight:18,opacity:.18}).addTo(map);
+      let line=L.polyline(a.history.map(p=>[p.lat,p.lng]),{color:'#00e5ff',weight:5,opacity:1}).addTo(map);
+      polylines.push(lineGlow,line);
+    }
+    const perf=(data.performance||[]).find(p=>p.id===a.id)||{};
+    const stCls=a.status==='available'?'status-available':'status-moving';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="color:var(--accent-cyan);font-weight:700">#${a.id}</td>
+      <td><span class="status-pill ${stCls}">${a.status.replaceAll('_',' ')}</span></td>
+      <td>${a.eta?a.eta+' min':'-'}</td>
+      <td>${a.missions}</td>
+      <td>${a.distance_travelled.toFixed(2)} km</td>
+      <td>${perf.avg_time||0} min</td>
+      <td style="color:var(--accent-cyan)">${perf.efficiency||0}%</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Performance bars
+  let perfHTML='';
+  (data.performance||[]).forEach(p=>{
+    perfHTML+=`<div class="perf-item">
+      <div class="perf-header"><span class="perf-name">AMB #${p.id}</span><span class="perf-pct">${p.efficiency}%</span></div>
+      <div class="perf-bar-bg"><div class="perf-bar" style="width:${p.efficiency}%"></div></div>
+    </div>`;
+  });
+  document.getElementById('performanceList').innerHTML=perfHTML||'<div class="no-data">— AUCUNE DONNÉE —</div>';
+
+  // Suggestions IA
+  let sugHTML='';
+  if(Object.keys(data.suggestions).length===0){
+    sugHTML='<div class="no-data">— AUCUNE SUGGESTION ACTIVE —</div>';
+  } else {
+    Object.entries(data.suggestions).forEach(([acc,v])=>{
+      sugHTML+=`<div class="suggestion-item">
+        <span class="sug-icon">→</span>
+        <span class="sug-text">Accident #${acc}: <strong style="color:var(--accent-cyan)">${v}</strong></span>
+      </div>`;
+    });
+  }
+  document.getElementById('suggestionsDiv').innerHTML=sugHTML;
+
+  // Evaluation IA
+  const ev = data.evaluation || {};
+  let evalHTML = '';
+  if(!ev.cases){
+    evalHTML = '<div class="no-data">— AUCUNE COMPARAISON DISPONIBLE —</div>';
+  } else {
+    const latest = ev.latest || {};
+    const totals = ev.totals || {};
+    evalHTML = `
+      <div class="compare-grid">
+        <div class="compare-card">
+          <div class="compare-head without">Sans Système</div>
+          <div class="compare-line"><span>Temps moyen</span><strong>${ev.without_system.avg_time} min</strong></div>
+          <div class="compare-line"><span>Distance moyenne</span><strong>${ev.without_system.avg_distance} km</strong></div>
+          <div class="compare-line"><span>Score moyen</span><strong>${ev.without_system.avg_score}</strong></div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head with">Avec Système</div>
+          <div class="compare-line"><span>Temps moyen</span><strong>${ev.with_system.avg_time} min</strong></div>
+          <div class="compare-line"><span>Distance moyenne</span><strong>${ev.with_system.avg_distance} km</strong></div>
+          <div class="compare-line"><span>Score moyen</span><strong>${ev.with_system.avg_score}</strong></div>
+        </div>
+      </div>
+      <div class="eval-summary">
+        <div class="eval-badge">Gain Temps ${ev.improvement.time_pct}%</div>
+        <div class="eval-badge" style="margin-left:8px;">Gain Distance ${ev.improvement.distance_pct}%</div>
+        <div class="eval-badge" style="margin-left:8px;">Gain Score ${ev.improvement.score_pct}%</div>
+        <div class="eval-latest">
+          Gains cumulÃ©s: <strong style="color:var(--accent-green)">${totals.time_saved || 0} min</strong> Â·
+          <strong style="color:var(--accent-cyan)">${totals.distance_saved || 0} km</strong> Â·
+          Score <strong style="color:var(--accent-orange)">${totals.score_saved || 0}</strong><br>
+          Cas évalués: <strong style="color:var(--text-bright)">${ev.cases}</strong><br>
+          Dernier cas #${latest.accident_id || '-'} (${(latest.severity || '-').toUpperCase()})<br>
+          Sans système: AMB #${latest.without_ambulance || '-'} → ${latest.without_hospital || '-'}<br>
+          Avec système: AMB #${latest.with_ambulance || '-'} → ${latest.with_hospital || '-'}<br>
+          Temps gagné: <strong style="color:var(--accent-green)">${latest.time_saved || 0} min</strong> ·
+          Distance gagnée: <strong style="color:var(--accent-cyan)">${latest.distance_saved || 0} km</strong>
+        </div>
+      </div>`;
+  }
+  document.getElementById('evaluationPanel').innerHTML = evalHTML;
+}
+
+// ===== FETCH DATA =====
+async function fetchData(){
+  try{
+    const res=await fetch('/data');
+    const data=await res.json();
+    loadData(data);
+  }catch(e){ console.error(e); }
+}
+
+// ===== ACTIONS =====
+async function startSUMO(){
+  showToast('🚀 Démarrage SUMO...','info');
+  addLog('Démarrage SUMO demandé...','info');
+  const res=await fetch('/start_sumo');
+  const d=await res.json();
+  showToast(d.status, d.status.includes('✅')?'success':'error');
+  addLog(d.status, d.status.includes('✅')?'ok':'err');
+  fetchData();
+}
+async function stopSUMO(){
+  const res=await fetch('/stop');
+  const d=await res.json();
+  showToast(d.status,'info');
+  addLog(d.status,'info');
+}
+async function generateAccident(){
+  const res=await fetch('/generate_road_accident');
+  const d=await res.json();
+  // Le marker est ajouté instantanément via socket 'new_accident'
+  addLog(`💥 Accident #${d.id} généré — ${d.severity.toUpperCase()}`, d.severity==='high'?'err':'info');
+  fetchData();
+}
+async function dispatchAmbulances(){
+  showToast('📤 Dispatch en cours...','info');
+  const res=await fetch('/dispatch',{method:'POST'});
+  const d=await res.json();
+  showToast(d.status||d.error, d.error?'error':'success');
+  addLog(d.status||d.error, d.error?'err':'ok');
+  fetchData();
+}
+async function resetSystem(){
+  await fetch('/reset');
+  showToast('♻ Système réinitialisé','success');
+  addLog('Système réinitialisé','info');
+  fetchData();
+}
+
+// ===== SOCKET.IO =====
+const socket = io();
+
+socket.on('ambulance_update', function(a){
+  createOrUpdateMarker(ambulanceMarkers,a.id,a.lat,a.lng,icons.ambulance,
+    `🚑 <b>Ambulance ${a.id}</b><br>Statut: ${a.status.replaceAll('_',' ')}<br>ETA: ${a.eta||'-'} min`);
+});
+
+socket.on('new_accident', function(a){
+  createOrUpdateMarker(accidentMarkers,a.id,a.lat,a.lng,makeCrashIcon(a.severity),
+    `<b>💥 Accident #${a.id}</b><br>Gravité: <b>${a.severity.toUpperCase()}</b><br>Statut: ${a.status}`);
+  showToast(`💥 Accident #${a.id} — ${a.severity.toUpperCase()}`,'error');
+  map.setView([a.lat, a.lng], 15, {animate:true, duration:1});
+});
+
+socket.on('accident_update', function(a){
+  if(a.status==='completed'){
+    if(accidentMarkers[a.id]){ map.removeLayer(accidentMarkers[a.id]); delete accidentMarkers[a.id]; }
+    showToast(`✅ Mission #${a.id} terminée`,'success');
+    addLog(`Mission #${a.id} terminée avec succès`,'ok');
+  } else if(a.status==='arrived'){
+    showToast(`🚑 Ambulance arrivée — Accident #${a.id}`,'info');
+    addLog(`Ambulance arrivée sur Accident #${a.id}`,'info');
+  } else {
+    if(accidentMarkers[a.id]){
+      accidentMarkers[a.id].setPopupContent(
+        `<b>💥 Accident #${a.id}</b><br>Gravité: <b>${a.severity.toUpperCase()}</b><br>Statut: ${a.status}`);
+    }
+  }
+});
+
+socket.on('sumo_status', function(d){
+  updateSumoUI(d);
+});
+
+socket.on('reset', function(){
+  Object.values(accidentMarkers).forEach(m=>map.removeLayer(m));
+  accidentMarkers={};
+  clearPolylines();
+  addLog('Tous les marqueurs réinitialisés','info');
+});
+
+// ===== SUMO STATUS UI =====
+function updateSumoUI(d){
+  const dot  = document.getElementById('sumoStatusDot');
+  const txt  = document.getElementById('sumoStatusText');
+  const tim  = document.getElementById('sumoSimTime');
+  const veh  = document.getElementById('sumoVehicles');
+  const st   = document.getElementById('sumoTime');
+  // Sur carte
+  const mapStatus = document.getElementById('mapSumoStatus');
+  const mapVeh    = document.getElementById('mapSumoVeh');
+  const mapTime   = document.getElementById('mapSumoTime');
+  const overlay   = document.getElementById('mapSumoOverlay');
+
+  if(d.running){
+    dot.style.background='var(--accent-green)';
+    dot.style.boxShadow='0 0 8px var(--accent-green)';
+    dot.style.animation='dotPulse 2s ease-in-out infinite';
+    txt.style.color='var(--accent-green)';
+    txt.textContent=`SUMO LIVE · ${d.vehicles||0} VEH`;
+    tim.textContent=d.sim_time?` · T=${d.sim_time}s`:'';
+    if(veh) veh.textContent=d.vehicles||0;
+    if(st)  st.textContent=d.sim_time||0;
+    // Carte overlay
+    if(mapStatus){ mapStatus.textContent='ONLINE'; mapStatus.style.color='var(--accent-green)'; }
+    if(mapVeh)    mapVeh.textContent=d.vehicles||0;
+    if(mapTime)   mapTime.textContent=d.sim_time||0;
+    if(overlay)   overlay.classList.add('active');
+  } else {
+    dot.style.background='var(--text-dim)';
+    dot.style.boxShadow='none';
+    dot.style.animation='none';
+    txt.style.color='var(--text-dim)';
+    txt.textContent='SUMO OFFLINE';
+    tim.textContent='';
+    if(veh) veh.textContent=0;
+    if(st)  st.textContent=0;
+    if(mapStatus){ mapStatus.textContent='OFFLINE'; mapStatus.style.color='var(--accent-red)'; }
+    if(mapVeh)    mapVeh.textContent=0;
+    if(mapTime)   mapTime.textContent=0;
+    if(overlay)   overlay.classList.remove('active');
+  }
+}
+
+// ===== POLLING SUMO STATUS =====
+async function checkSumoStatus(){
+  try{
+    const res=await fetch('/sumo_status');
+    const d=await res.json();
+    updateSumoUI(d);
+  }catch(e){}
+}
+setInterval(checkSumoStatus, 2000);
+checkSumoStatus();
+
+// ===== LEAFLET POPUP STYLE =====
+const style=document.createElement('style');
+style.textContent=`
+  .leaflet-popup-content-wrapper {
+    background:rgba(5,12,20,.95)!important; border:1px solid rgba(0,200,255,.3)!important;
+    border-radius:3px!important; color:#e8f4ff!important;
+    font-family:'JetBrains Mono',monospace!important; font-size:11px!important;
+    box-shadow:0 0 20px rgba(0,200,255,.2)!important;
+  }
+  .leaflet-popup-tip { background:rgba(5,12,20,.95)!important; }
+  .leaflet-popup-close-button { color:#3a5a70!important; }
+  .leaflet-control-zoom a { background:rgba(5,12,20,.9)!important; border-color:rgba(0,200,255,.2)!important; color:#7ab0cc!important; }
+`;
+document.head.appendChild(style);
+
+// ===== AUTO REFRESH =====
+setInterval(fetchData, 3000);
+fetchData();
+</script>
+</body>
+</html>
