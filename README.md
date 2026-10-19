@@ -32,7 +32,7 @@ The goal of this project is to explore how AI and intelligent traffic management
 
 ## Team Members
 - Loubna Samid
-- Hatim [Last Name]
+- safaa hatim
 - Soumia Hilami
 
 ## Future Improvements
