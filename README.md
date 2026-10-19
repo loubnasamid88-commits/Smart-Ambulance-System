@@ -31,9 +31,9 @@ The project aims to predict accident severity using a Random Forest model and es
 The goal of this project is to explore how AI and intelligent traffic management can contribute to faster and more efficient emergency services.
 
 ## Team Members
-- Loubna Samid
-- safaa hatim
-- Soumia Hilami
+- LOUBNA SAMID 
+- SAFAA HATIM
+- SOUMIA HILAMI
 
 ## Future Improvements
 - Integrate real-time traffic data.
