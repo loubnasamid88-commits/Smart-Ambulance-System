@@ -1,78 +1,41 @@
-\# Smart Ambulance System 🚑
+# Smart Ambulance System 🚑
 
+## Project Overview
+Smart Ambulance System is an intelligent emergency management project that combines Artificial Intelligence (AI), Machine Learning, the Internet of Things (IoT), and traffic simulation to support emergency response.
 
+The project aims to predict accident severity using a Random Forest model and estimate ambulance arrival time (ETA), helping improve emergency planning and resource allocation.
 
-\## Project Overview
+## Objectives
+- Predict accident severity using Machine Learning.
+- Estimate ambulance arrival time (ETA).
+- Support ambulance allocation based on accident severity.
+- Analyze traffic conditions to support emergency response.
+- Explore intelligent technologies for emergency management.
 
-Smart Ambulance System is an intelligent emergency management project that combines the Internet of Things (IoT), Artificial Intelligence (AI), and Machine Learning to improve emergency response.
+## Technologies Used
+- Python
+- Artificial Intelligence (AI)
+- Machine Learning
+- Random Forest
+- Internet of Things (IoT)
+- Database Management
+- SUMO Traffic Simulation
 
+## Key Features
+- Accident severity prediction.
+- Ambulance arrival-time estimation.
+- Traffic simulation and analysis.
+- Data-driven emergency response support.
 
+## Project Purpose
+The goal of this project is to explore how AI and intelligent traffic management can contribute to faster and more efficient emergency services.
 
-The system uses a Random Forest model to predict accident severity and help identify the appropriate ambulance response. It also considers ambulance arrival time (ETA) to support more efficient emergency management.
+## Team Members
+- Loubna Samid
+- Hatim [Last Name]
+- Soumia Hilami
 
-
-
-\## Objectives
-
-\- Predict accident severity using Machine Learning.
-
-\- Estimate ambulance arrival time (ETA).
-
-\- Support ambulance selection based on accident severity.
-
-\- Use data analysis to improve emergency response.
-
-\- Integrate intelligent technologies into emergency management.
-
-
-
-\## Technologies
-
-\- Python
-
-\- Machine Learning
-
-\- Random Forest
-
-\- Artificial Intelligence (AI)
-
-\- Internet of Things (IoT)
-
-\- Database Management
-
-\- SUMO Traffic Simulation
-
-
-
-\## Key Features
-
-\- Accident severity prediction.
-
-\- Ambulance arrival-time estimation.
-
-\- Traffic simulation and analysis.
-
-\- Data-driven emergency response support.
-
-
-
-\## Project Purpose
-
-The main goal is to support faster, smarter, and more efficient emergency services through AI and intelligent traffic management.
-
-
-
-\## Author
-
-Loubna Samid
-
-
-
-\## Future Improvements
-
-\- Integrate real-time traffic data.
-
-\- Improve ETA prediction accuracy.
-
-\- Enhance communication between ambulances and emergency services.
-
+## Future Improvements
+- Integrate real-time traffic data.
+- Improve ETA prediction accuracy.
+- Enhance communication between ambulances and emergency services.
